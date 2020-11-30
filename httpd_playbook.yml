@@ -1,0 +1,59 @@
+- hosts: all
+  tasks:
+    - name: "Creating CDROM's mount point."
+      file:
+        path: "/dvd"
+        state: directory
+
+    - name: "Mounting CDROM"
+      mount:
+        src: "/dev/cdrom"
+        path: "dvd"
+        state: mounted
+        fstype: "iso9660"
+
+    - name: "Creating yum repo 1"
+      yum_repository:
+        baseurl: "/dvd/AppStream"
+        name: "DVDrepo1"
+        description: "CDROM Repo 1"
+        gpgcheck: no
+
+    - name: "Creating yum repo 2"
+      yum_repository:
+        baseurl: "/dvd/BaseOS"
+        name: "DVDrepo2"
+        description: "CDROM Repo 2"
+        gpgcheck: no
+
+    - name: "Installing HTTPD Server"
+      package:
+        name: "httpd"
+        state: present
+
+    - name: "Creating new directory for root to configure HTTPD"
+      file:
+        state: directory
+        path: "/var/www/myconf"
+
+    - name: "Copying new conf file for HTTPD"
+      copy:
+        src: "newconf.conf"
+        dest: "/etc/httpd/conf.d/newconf.conf"
+
+    - name: "Copying content to Document root"
+      copy:
+        dest: "/var/www/myconf/myweb.html"
+        content: "This is my webpage"
+
+    - name: "Exposing the port"
+      firewalld:
+        port: "8080/tcp"
+        state: enabled
+        permanent: yes
+        immediate: yes
+
+    - name: "Restarting HTTPD Service"
+      shell: "/usr/sbin/httpd"
+      register: startoutput
+      changed_when: "'already running' not in startoutput.stdout"
